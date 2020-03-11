@@ -70,7 +70,7 @@ The options below are all specified on the command-line.
   environment that supports multicasting.
 
 * `-encrypt` - Specifies the secret key to use for encryption of Serf
-  network traffic. This key must be 16-bytes that are base64 encoded. The
+  network traffic. This key must be 32-bytes that are base64 encoded. The
   easiest way to create an encryption key is to use `serf keygen`. All
   nodes within a cluster must share the same encryption key to communicate.
 
@@ -80,8 +80,9 @@ The options below are all specified on the command-line.
   than one encryption key until all members have received the new key. The
   keyring file helps persist changes to the encryption keyring, allowing the
   agent to start and rejoin the cluster successfully later on, even if key
-  rotations had been initiated by other members in the cluster. More information
-  on the format of the keyring file can be found below in the examples section.
+  rotations had been initiated by other members in the cluster. If left blank, the
+  keyring will not be persisted to a file. More information on the format of the
+  keyring file can be found below in the examples section.
 
   NOTE: this option is not compatible with the `-encrypt` option.
 
@@ -93,9 +94,10 @@ The options below are all specified on the command-line.
   Event handlers can be changed by reloading the configuration.
 
 * `-join` - Address of another agent to join upon starting up. This can be
-  specified multiple times to specify multiple agents to join. If Serf is
-  unable to join with any of the specified addresses, agent startup will
-  fail. By default, the agent won't join any nodes when it starts up.
+  specified multiple times to specify multiple agents to join. Startup will
+  succeed if any specified agent can be joined, but will fail if none of the
+  agents specified can be joined. By default, the agent won't join any nodes
+  when it starts up.
 
 * `-replay` - If set, old user events from the past will be replayed for the
   agent/cluster that is joining based on a `-join` configuration. Otherwise,
@@ -139,6 +141,8 @@ The options below are all specified on the command-line.
 * `-retry-max` - Provides a limit on how many attempts to join the cluster
   can be made by `-retry-join`. If 0, there is no limit, and the agent will
   retry forever. Defaults to 0.
+  
+* `-disable-compression` - Disable message compression for broadcasting events. Enabled by default. **Useful for debugging message payloads**.
 
 * `-role` - **Deprecated** The role of this node, if any. By default this is blank or empty.
   The role can be used by events in order to differentiate members of a
@@ -183,6 +187,10 @@ The options below are all specified on the command-line.
 * `-syslog` - When provided, the logs will also be sent to the syslog facility.
   This flag can only be enabled on Linux or OSX systems, as Windows and Plan 9 do
   not provide the syslog facility.
+
+* `-broadcast-timeout` - Sets the broadcast timeout, which is the max time allowed for
+  responses to events including leave and force remove messages. Defaults to 5s. This
+  should use the "s" suffix for second, "m" for minute, or "h" for hour.
 
 ## Configuration Files
 
@@ -312,6 +320,8 @@ at a single JSON object with configuration within it.
   additional overhead, so tuning these past the default values of 1024 will depend
   on your network configuration.
 
+* `broadcast_timeout` - Equivalent to the `-broadcast-timeout` command-line flag.
+
 #### Example Keyring File
 
 The keyring file is a simple JSON-formatted text file. It is important to
@@ -320,9 +330,9 @@ file:
 
 ```javascript
 [
-  "QHOYjmYlxSCBhdfiolhtDQ==",
-  "daZ2wnuw+Ql+2hCm7vQB6A==",
-  "keTZydopxtiTY7HVoqeWGw=="
+  "HvY8ubRZMgafUOWvrOadwOckVa1wN3QWAo46FVKbVN8=",
+  "T9jncgl9mbLus+baTTa7q7nPSUrXwbDi2dhbtqir37s=",
+  "5K9OtfP7efFrNKe5WCQvXvnaXJ5cWP0SvXiwe0kkjM4="
 ]
 ```
 
@@ -331,3 +341,14 @@ list is the primary key, which is the key used to encrypt all outgoing messages.
 The remaining keys in the list are considered secondary and are used for
 decryption only. During message decryption, Serf uses the configured encryption
 keys in the order they appear in the keyring file until all keys are exhausted.
+
+## Ports Used
+
+Serf requires 2 ports to work properly. Below we document the requirements for each
+port.
+
+* Gossip (Default 7946) This is used for communication between the Serf nodes. TCP
+and UDP.
+
+* RPC (Default 7373) This is used by agents to handle RPC from the CLI, as well as
+by custom RPC clients written by users. TCP only.

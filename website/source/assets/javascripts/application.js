@@ -1,12 +1,7 @@
+//= require turbolinks
 //= require jquery
-//= require bootstrap
 
-//= require highcharts
-//= require classy
-//= require simulator
+//= require hashicorp/sidebar
+//= require hashicorp/mega-nav
 
-//= require lib/Base
-
-//= require d3
-//= require Sidebar
-//= require serf
+//= require _simulator
